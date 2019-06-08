@@ -11,4 +11,3 @@
 #include <tchar.h>
 // C++ RunTime Header Files
 #include <string>
-#include <optional>

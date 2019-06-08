@@ -14,13 +14,7 @@ struct Error {
   }
 };
 
-// Returns the last Win32 error, in string format. Returns an empty string if
-// there is no error.
 wstring GetErrorString(DWORD lastError) {
-  if (lastError == ERROR_SUCCESS) {
-    return {};
-  }
-
   LPWSTR messageBuffer = nullptr;
   size_t size = FormatMessage(
       FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
@@ -29,15 +23,13 @@ wstring GetErrorString(DWORD lastError) {
       (LPWSTR)&messageBuffer, 0, NULL);
 
   wstring message(messageBuffer, size);
-
-  // Free the buffer.
   LocalFree(messageBuffer);
 
   return message;
 }
 
 void ErrorMessageBox(LPCTSTR caption, DWORD errorCode = 0) {
-  DWORD code = errorCode == 0 ? GetLastError() : errorCode;
+  DWORD code = errorCode ? errorCode : GetLastError();
   wstring msg = GetErrorString(code);
   MessageBox(nullptr, msg.data(), caption, MB_OK);
 }
@@ -47,25 +39,24 @@ void DispatchUpdateEvent() {
   HANDLE eventHandle = OpenEvent(EVENT_MODIFY_STATE, FALSE, regPath);
   if (eventHandle == nullptr || eventHandle == INVALID_HANDLE_VALUE) {
     throw Error::fromLastError(_T("OpenEvent failed"));
-    return;
   }
 
-  int set_result = SetEvent(eventHandle);
-  if (set_result == 0) {
+  int setResult = SetEvent(eventHandle);
+  if (setResult == 0) {
     throw Error::fromLastError(_T("SetEvent failed"));
-    return;
   }
 
   CloseHandle(eventHandle);
 }
 
 void SetTouchpadActivation(bool enable) {
-  LPCTSTR keyPath = _T("Software\\Elantech\\DeviceInformation");
-  LPCTSTR valName = _T("Port0_MasterEnable");
-  DWORD enablement = enable;
-  LSTATUS openRes = RegSetKeyValue(HKEY_CURRENT_USER, keyPath, valName,
-                                   REG_DWORD, &enablement, sizeof(enablement));
-  if (openRes != ERROR_SUCCESS) {
+  LPCTSTR elanDeviceKey = _T("Software\\Elantech\\DeviceInformation");
+  LPCTSTR touchpadVal = _T("Port0_MasterEnable");
+  DWORD onOff = enable;
+  LSTATUS setResult =
+      RegSetKeyValue(HKEY_CURRENT_USER, elanDeviceKey, touchpadVal, REG_DWORD,
+                     &onOff, sizeof(onOff));
+  if (setResult != ERROR_SUCCESS) {
     throw Error::fromLastError(_T("RegOpenKeyEx failed"));
   }
 }
